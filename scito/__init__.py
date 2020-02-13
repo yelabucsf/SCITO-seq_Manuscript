@@ -1,0 +1,3 @@
+'''
+Scito-seq package
+'''
