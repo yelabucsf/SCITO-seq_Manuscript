@@ -60,12 +60,12 @@ class ScitoFrame:
         '''
 
         # TODO: random seed
-        adata = self.adata
 
-        batches = adata.var.index.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
+        batches = self.adata.var.index.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
         nClust = n_clust if n_clust != None else len(batches)+1
 
-        self.ab_adata = adata[:,adata.var.index.str.contains(r'(%s\d+)'%batchid_string)]
+        # collaps counts within batch
+        ab_adata = self.adata[:,self.adata.var.index.str.contains(r'(%s\d+)'%batchid_string)]
 
 
         # clustering functions
@@ -74,7 +74,7 @@ class ScitoFrame:
             clusters = clust_model.fit_predict(self.ab_adata.X)
 
         elif kfunc == "clarans":
-            clust_model = clarans(np.array(self.ab_adata.X.todense()), number_clusters=nClust, numlocal=50, maxneighbor=maxneighbor).process()
+            clust_model = clarans(ab_adata.X.todense().tolist(), number_clusters=nClust, numlocal=50, maxneighbor=maxneighbor).process()
             clusters = clust_model.get_clusters()
 
 
