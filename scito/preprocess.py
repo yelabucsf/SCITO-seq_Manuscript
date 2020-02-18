@@ -10,6 +10,7 @@ import multiprocessing
 
 from sklearn.cluster import KMeans
 from pyclustering.cluster.clarans import clarans
+from utils import count_collapser
 
 class ScitoFrame:
     '''
@@ -50,9 +51,8 @@ class ScitoFrame:
         :param n_clust: Initial number of clusters for batches.
                 Default is the # of batch oligo names + 1 (to account for negatives)
         :param n_init: value for k-means clustering (for kfunc = "kmeans"). 100 by default
-        :param kfunc: Clustering function for initial batch grouping. Default is "clarans" (enhanced 'CLARA') for fast k-medoids
-                clustering on large applications, also support "kmeans" for kmeans clustering
-        :param maxneighbor: Max number of neighbors per CLARANS cluster, for kfunc = "clarans"
+        :param kfunc: Clustering function for initial batch grouping. Default and only available now is "kmeans"
+        :param maxneighbor: Max number of neighbors per CLARANS cluster, for kfunc = "clarans" (irrelevant for now)
         :param seed: Sets the random seed.
         :param keep_input: keep input previous step of data analysis
         :param verbose: Chatty
@@ -64,18 +64,30 @@ class ScitoFrame:
         batches = self.adata.var.index.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
         nClust = n_clust if n_clust != None else len(batches)+1
 
-        # collaps counts within batch
+        # extract only antibody counts
         ab_adata = self.adata[:,self.adata.var.index.str.contains(r'(%s\d+)'%batchid_string)]
 
+        if keep_input:
+            self.input = ab_adata
+        ab_adata = None
+
+        # collapse counts within batch
+        batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
 
         # clustering functions
+        # TODO: re-implement CLARA or other k-medoid
         if kfunc == "kmeans":
             clust_model = KMeans(n_clusters=nClust, n_init=n_init, random_state=seed, n_jobs=int(multiprocessing.cpu_count()*0.6))
-            clusters = clust_model.fit_predict(self.ab_adata.X)
+            clusters = clust_model.fit_predict(batch_counts)
 
-        elif kfunc == "clarans":
-            clust_model = clarans(ab_adata.X.todense().tolist(), number_clusters=nClust, numlocal=50, maxneighbor=maxneighbor).process()
-            clusters = clust_model.get_clusters()
+        else:
+            print("ERROR: unknown clustering function. Select from kmeans, ")
+
+        self.adata.obs['batch_cluster'] = clusters
+
+
+
+
 
 
 
