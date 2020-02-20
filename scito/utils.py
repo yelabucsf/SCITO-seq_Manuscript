@@ -2,6 +2,9 @@
 Utilities for the package
 '''
 
+import numpy as np
+import scanpy as sc
+
 def count_collapser(data, bc):
     '''
     Collapses counts for all antibodies for a given batch barcode. Outputs dense data structure
@@ -22,8 +25,8 @@ def count_collapser(data, bc):
     return collapsed
 
 
-def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key='louvain_r1'):
-    """ Copied from https://github.com/theislab/scanpy/issues/181 - posted by one of scanpy devs
+def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key='batch_cluster'):
+    """ Copied from https://github.com/theislab/scanpy/issues/181 - posted by one of scanpy developers
     A function go get mean z-score expressions of feature per cluster (class)
     #
     # Inputs:
@@ -33,7 +36,7 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
     #    gene_symbol_key - The key for the anndata.var field with gene IDs or names that correspond to the marker
     #                      genes
     #    partition_key   - The key for the anndata.obs field where the cluster IDs are stored. The default is
-    #                      'louvain_r1' """
+    #                      'batch_cluster' """
 
     # Test inputs
     if partition_key not in anndata.obs.columns.values:
@@ -51,13 +54,13 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
     else:
         gene_ids = anndata.var_names
 
-    clusters = anndata.obs[partition_key].cat.categories
+    clusters = set(anndata.obs[partition_key])
     n_clust = len(clusters)
     marker_exp = pd.DataFrame(columns=clusters)
     marker_exp['cell_type'] = pd.Series({}, dtype='str')
     marker_names = []
 
-    z_scores = sc.pp.scale(anndata, copy=True)
+    z_scores = sc.pp.scale(anndata, copy=True, zero_center=False)
 
     i = 0
     for group in marker_dict:
@@ -80,3 +83,5 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
     marker_exp.index = marker_names
 
     return (marker_exp)
+
+

@@ -7,10 +7,12 @@ import os
 import scanpy as sc
 import numpy as np
 import multiprocessing
+import anndata
+import pandas as pd
 
 from sklearn.cluster import KMeans
-from pyclustering.cluster.clarans import clarans
-from utils import count_collapser
+from scipy import sparse
+from utils import count_collapser, av_gene_expression
 
 class ScitoFrame:
     '''
@@ -44,7 +46,8 @@ class ScitoFrame:
                   keep_input=False,
                   verbose=False):
         '''
-        Function to assign droplets to sample id and detect singlets vs multiplets
+        Function to assign droplets to sample id and detect singlets vs multiplets. Antibody counts are expected to be
+        normalized and log scaled (e.g. using sc.pp.normalize_per_cell(), sc.pp.log1p())
         :param batchid_string: string identifying batch barcode. Default: "barcode"
         :param positiveQuantile: The quantile of inferred 'negative' distribution for each batch -
                 over which the cell is considered 'positive'. Default is 0.99
@@ -61,11 +64,11 @@ class ScitoFrame:
 
         # TODO: random seed
 
-        batches = self.adata.var.index.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
+        batches = self.adata.var_names.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
         nClust = n_clust if n_clust != None else len(batches)+1
 
         # extract only antibody counts
-        ab_adata = self.adata[:,self.adata.var.index.str.contains(r'(%s\d+)'%batchid_string)]
+        ab_adata = self.adata[:,self.adata.var_names.str.contains(r'(%s\d+)'%batchid_string)]
 
         if keep_input:
             self.input = ab_adata
@@ -83,7 +86,23 @@ class ScitoFrame:
         else:
             print("ERROR: unknown clustering function. Select from kmeans, ")
 
-        self.adata.obs['batch_cluster'] = clusters
+        # create anndata object with collapsed counts per batch
+        batch_adata = anndata.AnnData(X=sparse.csr_matrix(batch_counts),
+                                      obs=self.adata.obs,
+                                      var=pd.DataFrame(batches, columns=['batch']))
+
+        batch_adata.obs['batch_cluster'] = clusters
+        marker_dict = {batch_adata.var.keys()[0]: batch_adata.var['batch']} # for average expression of batch oligo
+
+        av_batch_expr = av_gene_expression(batch_adata, marker_dict, gene_symbol_key='batch', partition_key='batch_cluster')
+
+
+
+
+
+
+
+
 
 
 
