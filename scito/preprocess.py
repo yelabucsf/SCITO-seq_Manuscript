@@ -44,7 +44,7 @@ class ScitoFrame:
                   n_init=100,
                   kfunc="clarans",
                   maxneighbor=100,
-                  seed=42,
+                  seed=33,
                   keep_input=False,
                   verbose=False):
         '''
@@ -64,7 +64,6 @@ class ScitoFrame:
         :return: anndata object split to sample id's and marked as singlets or multiplets
         '''
 
-        # TODO: random seed
 
         batches = self.adata.var_names.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
         nClust = n_clust if n_clust != None else len(batches)+1
@@ -113,6 +112,9 @@ class ScitoFrame:
 
         av_batch_expr = av_gene_expression(batch_adataNormLin, marker_dict, gene_symbol_key='batch', partition_key='batch_cluster').iloc[:,:-1]
 
+        # free up memory
+        batch_adataNormLin = None
+
         if any(av_batch_expr.iloc[:,:-1]) == 0:
             warn("WARNING Cells with 0 counts exist as a cluster")
 
@@ -157,42 +159,15 @@ class ScitoFrame:
         batch_adata.obs['best_guess'] = best_guess
         batch_adata.obs['expression'] = best_exp
 
+        # Assemble some meta data
+        n_cells_atLevel = [sum(n_positive == i).tolist()[0][0] for i in range(0,7)]
+        n_cells_atLevel_df = pd.DataFrame({"cells_per_drop": ["{} cells per drop".format(x) for x in range(0,7)],
+                                           "N_drops": n_cells_atLevel})
 
 
-        # doublet_names <- names(x = table(doublet_id))[-1] # Not used
-        classification < - classification.
-        global
-        classification
-        [classification.
-        global == "Negative"] < - "Negative"
-        classification[classification.
-        global == "Singlet"] < - hash.maxID[which(x=classification.
-        global == "Singlet")]
-        classification[classification.
-        global == "Doublet"] < - doublet_id[which(x=classification.
-        global == "Doublet")]
-        classification.metadata < - data.frame(
-            hash.maxID,
-            hash.secondID,
-            hash.margin,
-            classification,
-            classification.
-        global
-        )
-        colnames(x=classification.metadata) < - paste(
-            assay,
-            c('maxID', 'secondID', 'margin', 'classification', 'classification.global'),
-            sep='_'
-        )
-        object < - AddMetaData(object=object, metadata=classification.metadata)
-        Idents(object) < - paste0(assay, '_classification')
-        # Idents(object, cells = rownames(object@meta.data[object@meta.data$classification.global == "Doublet", ])) <- "Doublet"
-        doublets < - rownames(x=object[[]])[which(object[[paste0(assay, "_classification.global")]] == "Doublet")]
-        Idents(object=object, cells=doublets) < - 'Doublet'
-        # object@meta.data$hash.ID <- Idents(object)
-        object$hash.ID < - Idents(object=object)
+        self.meta = n_cells_atLevel_df
 
-    return (object)
+        return batch_adata
 
 
 
