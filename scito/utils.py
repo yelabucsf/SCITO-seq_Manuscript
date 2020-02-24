@@ -27,7 +27,8 @@ def count_collapser(data, bc):
 
 def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key='batch_cluster'):
     """ Copied from https://github.com/theislab/scanpy/issues/181 - posted by one of scanpy developers
-    A function go get mean z-score expressions of feature per cluster (class)
+    A function go get mean expressions of feature per cluster (class).
+    Data should be normalized to reads per cell, but kept in the linear scale
     #
     # Inputs:
     #    anndata         - An AnnData object containing the data set and a partition
@@ -60,8 +61,6 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
     marker_exp['cell_type'] = pd.Series({}, dtype='str')
     marker_names = []
 
-    z_scores = sc.pp.scale(anndata, copy=True, zero_center=False)
-
     i = 0
     for group in marker_dict:
         # Find the corresponding columns and get their mean expression in the cluster
@@ -70,10 +69,10 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
             if np.sum(ens_idx) == 0:
                 continue
             else:
-                z_scores.obs[ens_idx[0]] = z_scores.X[:, ens_idx].mean(1)  # works for both single and multiple mapping
+                anndata.obs[ens_idx[0]] = anndata.X[:, ens_idx].mean(1)  # works for both single and multiple mapping
                 ens_idx = ens_idx[0]
 
-            clust_marker_exp = z_scores.obs.groupby(partition_key)[ens_idx].apply(np.mean).tolist()
+            clust_marker_exp = anndata.obs.groupby(partition_key)[ens_idx].apply(np.mean).tolist()
             clust_marker_exp.append(group)
             marker_exp.loc[i] = clust_marker_exp
             marker_names.append(gene)
@@ -85,3 +84,41 @@ def av_gene_expression(anndata, marker_dict, gene_symbol_key=None, partition_key
     return (marker_exp)
 
 
+def drop_assigner(x):
+    '''
+    Assigns droplet to be empty ("NEG"), singlet ("SNG") or multiplet ("MTP"). Accepts numeric values
+    :param x: numeric value - number of batches detected above the threshold for this droplet
+    :return: Assignment for a droplet
+    '''
+    if x == 0:
+        res = "NEG"
+    elif x == 1:
+        res = "SNG"
+    elif x > 1:
+        res = "MTP"
+    else:
+        assert (x >= 0), "ERROR: wrong assignment"
+
+    return res
+
+def drop_identifier(a, n_top, bc_ids):
+    '''
+    Function to get the batch ID and barcode expression of the best guesses
+    :param a: array or list of barcode expression values per cell
+    :param n_top: number of top assignments to return - depends on how many cells are detected per multiplet
+    :param bc_ids: adata.var with batch name
+    :return: dictionary:
+                "barcodes" - barcode IDs for best guesses in order of descending expression values
+                "expression" - expression values in same order as barcode IDs
+    '''
+    a = a.toarray()[0].tolist()
+    bc_ids = bc_ids.tolist()
+    a_ord, bc_ids_ord = zip(*sorted(zip(a, bc_ids)))
+
+    top_a = a_ord[:n_top]
+    top_bc = bc_ids_ord[:n_top]
+
+    results = {"barcodes": top_bc,
+               "expression": top_a}
+
+    return results
