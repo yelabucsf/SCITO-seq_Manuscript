@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from warnings import warn
 from scipy import sparse
 from scipy.stats import norm
-from utils import count_collapser, av_gene_expression, drop_assigner, drop_identifier
+from scito.utils import count_collapser, av_gene_expression, drop_assigner, drop_identifier
 
 class ScitoFrame:
     '''
@@ -23,17 +23,21 @@ class ScitoFrame:
     path (str): path to the h5 data
     '''
 
-    def __init__(self, path):
+    def __init__(self, path=None, from_scanpy=None):
 
-        ext = os.path.splitext(path)[1].strip('.')
-
-# TODO: add other format options (Kallisto?)
-        if ext == "h5":
-            self.adata = sc.read_10x_h5(path, gex_only=False)
+        if from_scanpy != None:
+            self.adata = from_scanpy.copy()
 
         else:
-            self.adata = None
-            print("ERROR, unknown data format")
+            ext = os.path.splitext(path)[1].strip('.')
+            self.ext = ext
+            # TODO: add other format options (Kallisto?)
+            if ext == "h5":
+                self.adata = sc.read_10x_h5(path, gex_only=False)
+            else:
+                self.adata = None
+                print("ERROR, unknown data format")
+
 
 
 
@@ -42,7 +46,7 @@ class ScitoFrame:
                   positiveQuantile=0.99,
                   n_clust=None,
                   n_init=100,
-                  kfunc="clarans",
+                  kfunc="kmeans",
                   maxneighbor=100,
                   seed=33,
                   keep_input=False,
@@ -71,18 +75,18 @@ class ScitoFrame:
         # extract only antibody counts
         ab_adata = self.adata[:,self.adata.var_names.str.contains(r'(%s\d+)'%batchid_string)]
 
+        # collapse counts within batch
+        batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
+
         if keep_input:
             self.input = ab_adata
             if verbose:
                 print("Keeping sparse matrix with antibody expression only. Target = self.input")
         ab_adata = None
 
-        # collapse counts within batch
-        batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
-
         # create anndata object with collapsed counts per batch
         batch_adata = anndata.AnnData(X=sparse.csr_matrix(batch_counts),
-                                      obs=adata.obs,
+                                      obs=self.adata.obs,
                                       var=pd.DataFrame(batches, columns=['batch']))
         batch_counts = None
 
@@ -128,12 +132,15 @@ class ScitoFrame:
         # NOTE: fitting normal distribution to normalized and log-transformed data. Thresholds will be more conservative
         # TODO implement nbinom fit
         for batch_name in av_batch_expr.index:
-            values = batch_adata[:,batch_adata.var['batch'] == batch_name]
-            values_use = values[values.obs['batch_cluster'] == np.argmin(av_batch_expr.loc[batch_name,:])]
-            fitty = norm.fit(values_use.X)
-            cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed), q=positiveQuantile)
+            values = batch_adata[:, batch_adata.var['batch'] == batch_name]
+            values_use = values[values.obs['batch_cluster'] == np.argmin(av_batch_expr.loc[batch_name, :])]
+            fitty = norm.fit(values_use.X.toarray())
+            cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed),
+                                 q=positiveQuantile)
 
-            discrete.X[values.X > cutoff,discrete.var == batch_name] = 1
+            ox = [x[0] for x in np.argwhere(values.X > cutoff)]
+
+            discrete.X[ox, int(values.var.index[0])] = 1
             if verbose:
                 print("Cutoff for {}: {} reads".format(batch_name,
                                                        int(np.expm1(cutoff))))
@@ -148,10 +155,12 @@ class ScitoFrame:
             print("Assigning best guesses")
 
         # assign cells to HTO and get expression values of each
-        best = [drop_identifier(a=batch_adata[x,:].X,
-                                      n_top=int(n_positive[x]),
-                                      bc_ids=batch_adata.var['batch'])['expression']
-                      for x in range(batch_adata.n_obs)]
+        best = [drop_identifier(a=batch_adata.X[x, :],
+                                n_top=int(n_positive[x]),
+                                bc_ids=batch_adata.var['batch'])
+                for x in range(batch_adata.n_obs)]
+
+
 
         best_guess = [x['barcodes'] for x in best]
         best_exp = [x['expression'] for x in best]
@@ -166,6 +175,9 @@ class ScitoFrame:
 
 
         self.meta = n_cells_atLevel_df
+
+        self.n_positive = n_positive
+
 
         return batch_adata
 

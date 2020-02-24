@@ -3,7 +3,7 @@ Utilities for the package
 '''
 
 import numpy as np
-import scanpy as sc
+import pandas as pd
 
 def count_collapser(data, bc):
     '''
@@ -15,9 +15,6 @@ def count_collapser(data, bc):
     '''
     # TODO add handle for dense data
     rel_data = data[:,data.var.index.str.contains(r'(%s$)'%bc)]
-
-    # count number of antibodies per batch
-    assertrel_data.n_vars
 
     # collapse counts
     collapsed = rel_data.X.toarray().sum(axis=1).astype("int")
