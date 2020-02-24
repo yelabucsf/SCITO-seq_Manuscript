@@ -112,8 +112,9 @@ def drop_identifier(a, n_top, bc_ids):
                 "expression" - expression values in same order as barcode IDs
     '''
     a = a.toarray()[0].tolist()
+    a = [round(x, 2) for x in a]
     bc_ids = bc_ids.tolist()
-    a_ord, bc_ids_ord = zip(*sorted(zip(a, bc_ids)))
+    a_ord, bc_ids_ord = zip(*sorted(zip(a, bc_ids), reverse=True))
 
     top_a = a_ord[:n_top]
     top_bc = bc_ids_ord[:n_top]

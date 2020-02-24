@@ -14,7 +14,7 @@ from sklearn.cluster import KMeans
 from warnings import warn
 from scipy import sparse
 from scipy.stats import norm
-from utils import count_collapser, av_gene_expression, drop_assigner
+from utils import count_collapser, av_gene_expression, drop_assigner, drop_identifier
 
 class ScitoFrame:
     '''
@@ -131,47 +131,34 @@ class ScitoFrame:
             fitty = norm.fit(values_use.X)
             cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed), q=positiveQuantile)
 
-            discrete.X[values.X>cutoff,discrete.var==batch_name] = 1
+            discrete.X[values.X > cutoff,discrete.var == batch_name] = 1
             if verbose:
                 print("Cutoff for {}: {} reads".format(batch_name,
                                                        int(np.expm1(cutoff))))
 
 
-        # now assign cells to HTO based on discretized values
+        # assign whether drop is SNG, MTP or NEG
         n_positive = np.sum(discrete.X, axis=1)
-        assignment = [multiplet_classifier(int(x)) for x in n_positive]
+        assignment = [drop_assigner(int(x)) for x in n_positive]
         batch_adata.obs['assignment'] = assignment
 
-        batch_max =
+        if verbose:
+            print("Assigning best guesses")
+
+        # assign cells to HTO and get expression values of each
+        best = [drop_identifier(a=batch_adata[x,:].X,
+                                      n_top=int(n_positive[x]),
+                                      bc_ids=batch_adata.var['batch'])['expression']
+                      for x in range(batch_adata.n_obs)]
+
+        best_guess = [x['barcodes'] for x in best]
+        best_exp = [x['expression'] for x in best]
+
+        batch_adata.obs['best_guess'] = best_guess
+        batch_adata.obs['expression'] = best_exp
 
 
 
-        donor.id = rownames(x=data)
-        hash.max < - apply(X=data, MARGIN=2, FUN=max)
-        hash.maxID < - apply(X=data, MARGIN=2, FUN=which.max)
-        hash.second < - apply(X=data, MARGIN=2, FUN=MaxN, N=2)
-        hash.maxID < - as.character(x=donor.id[sapply(
-            X=1:ncol(x=data),
-                                      FUN = function(x)
-        {
-        return (which(x=data[, x] == hash.max[x])[1])
-        }
-        )])
-        hash.secondID < - as.character(x=donor.id[sapply(
-            X=1:ncol(x=data),
-                                         FUN = function(x)
-        {
-        return (which(x=data[, x] == hash.second[x])[1])
-        }
-        )])
-        hash.margin < - hash.max - hash.second
-        doublet_id < - sapply(
-            X=1: length(x=hash.maxID),
-        FUN = function(x)
-        {
-        return (paste(sort(x=c(hash.maxID[x], hash.secondID[x])), collapse="_"))
-        }
-        )
         # doublet_names <- names(x = table(doublet_id))[-1] # Not used
         classification < - classification.
         global
