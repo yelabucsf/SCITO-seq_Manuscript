@@ -39,8 +39,6 @@ class ScitoFrame:
                 print("ERROR, unknown data format")
 
 
-
-
     def detectMux(self,
                   batchid_string="barcode",
                   positiveQuantile=0.99,
@@ -75,14 +73,16 @@ class ScitoFrame:
         # extract only antibody counts
         ab_adata = self.adata[:,self.adata.var_names.str.contains(r'(%s\d+)'%batchid_string)]
 
+        # test that every batch has same number of anitbodies
+
+        # TODO: try to catch this exception and look for other identifiers
+        num_ab = set([ab_adata[:, ab_adata.var_names.str.contains(r'(%s$)' % x)].n_vars for x in batches])
+        assert(len(num_ab) == 1), "ERROR: different number of antibodies per batch. Program exit"
+
+
+
         # collapse counts within batch
         batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
-
-        if keep_input:
-            self.input = ab_adata
-            if verbose:
-                print("Keeping sparse matrix with antibody expression only. Target = self.input")
-        ab_adata = None
 
         # create anndata object with collapsed counts per batch
         batch_adata = anndata.AnnData(X=sparse.csr_matrix(batch_counts),
@@ -127,7 +127,10 @@ class ScitoFrame:
                                    obs=self.adata.obs,
                                    var=pd.DataFrame(batches, columns=['batch']))
 
-
+        # blank adata for resolved drops
+        result = anndata.AnnData(X=None,
+                              obs=None,
+                              var=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)]))
         # for each batch barcode, we will use the minimum cluster for fitting
         # NOTE: fitting normal distribution to normalized and log-transformed data. Thresholds will be more conservative
         # TODO implement nbinom fit
@@ -139,12 +142,23 @@ class ScitoFrame:
                                  q=positiveQuantile)
 
             ox = [x[0] for x in np.argwhere(values.X > cutoff)]
+            res = ab_adata[ox, ab_adata.var_names.str.contains(r'(%s$)' % batch_name)]
+            res.var_names = [x[0] for x in res.var_names.str.split(pat=batchid_string)]
+            res.var.drop(res.var.columns, axis=1, inplace=True)
+
+            # resolved adata
+            result = result.concatenate(res, join='outer', index_unique=None)
+
 
             discrete.X[ox, int(values.var.index[0])] = 1
             if verbose:
                 print("Cutoff for {}: {} reads".format(batch_name,
                                                        int(np.expm1(cutoff))))
-
+        if keep_input:
+            self.input = ab_adata
+            if verbose:
+                print("Keeping sparse matrix with antibody expression only. Target = self.input")
+        ab_adata = None
 
         # assign whether drop is SNG, MTP or NEG
         n_positive = np.sum(discrete.X, axis=1)
@@ -174,12 +188,17 @@ class ScitoFrame:
                                            "N_drops": n_cells_atLevel})
 
 
+        self.drop_assign = batch_adata
+
         self.meta = n_cells_atLevel_df
+
 
         self.n_positive = n_positive
 
 
-        return batch_adata
+        return result
+
+
 
 
 
