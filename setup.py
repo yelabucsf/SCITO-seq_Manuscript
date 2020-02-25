@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='scito',
-      version='0.1.0',
+      version='0.1.1',
       description='YeLab software to perform SCITO-seq analysis',
       url='https://github.com/yelabucsf/SCITO-seq',
       author='Anton Gvaihir Ogorodnikov, Ye Lab UCSF',

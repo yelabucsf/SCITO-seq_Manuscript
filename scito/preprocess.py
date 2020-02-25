@@ -19,14 +19,16 @@ from scito.utils import count_collapser, av_gene_expression, drop_assigner, drop
 class ScitoFrame:
     '''
     Class storing the count matrix
-
-    path (str): path to the h5 data
+    :param path: path to count matrix
+    :param from_scanpy: bool - is it going to be imported from already available scanpy AnnData? Use if path=None
+    :param adata: give variable name used for storing scanpy AnnData. Use only if from_scanpy=True
+    :return:
     '''
 
-    def __init__(self, path=None, from_scanpy=None):
+    def __init__(self, path=None, from_scanpy=False, adata=None):
 
-        if from_scanpy != None:
-            self.adata = from_scanpy.copy()
+        if from_scanpy:
+            self.adata = adata.copy()
 
         else:
             ext = os.path.splitext(path)[1].strip('.')
@@ -39,7 +41,7 @@ class ScitoFrame:
                 print("ERROR, unknown data format")
 
 
-    def detectMux(self,
+    def resolveMux(self,
                   batchid_string="barcode",
                   positiveQuantile=0.99,
                   n_clust=None,
@@ -128,9 +130,10 @@ class ScitoFrame:
                                    var=pd.DataFrame(batches, columns=['batch']))
 
         # blank adata for resolved drops
-        result = anndata.AnnData(X=None,
-                              obs=None,
-                              var=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)]))
+        result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, 28))),
+                                 var=pd.DataFrame(
+                                     index=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)])),
+                                 obs=None)
         # for each batch barcode, we will use the minimum cluster for fitting
         # NOTE: fitting normal distribution to normalized and log-transformed data. Thresholds will be more conservative
         # TODO implement nbinom fit
@@ -154,11 +157,17 @@ class ScitoFrame:
             if verbose:
                 print("Cutoff for {}: {} reads".format(batch_name,
                                                        int(np.expm1(cutoff))))
+
+        result = result[1:,:]
+
+
         if keep_input:
             self.input = ab_adata
             if verbose:
                 print("Keeping sparse matrix with antibody expression only. Target = self.input")
         ab_adata = None
+
+        del(self.adata)
 
         # assign whether drop is SNG, MTP or NEG
         n_positive = np.sum(discrete.X, axis=1)
@@ -187,15 +196,16 @@ class ScitoFrame:
         n_cells_atLevel_df = pd.DataFrame({"cells_per_drop": ["{} cells per drop".format(x) for x in range(0,7)],
                                            "N_drops": n_cells_atLevel})
 
-
+        # save drop assignment (for HTO demuxing only
         self.drop_assign = batch_adata
 
+        # some meta data
         self.meta = n_cells_atLevel_df
-
-
         self.n_positive = n_positive
 
 
+
+        # demultiplexed and resolved bcs
         return result
 
 
