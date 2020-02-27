@@ -93,7 +93,7 @@ class ScitoFrame:
         batch_counts = None
 
         # Normalize and log scale data
-        sc.pp.normalize_per_cell(batch_adata, counts_per_cell_after=1e4)
+        sc.pp.normalize_per_cell(batch_adata, counts_per_cell_after=1e4, min_counts=0)
         if verbose:
             print("Keeping linear scale data for computing average")
         batch_adataNormLin = batch_adata.copy()
