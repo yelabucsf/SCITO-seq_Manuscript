@@ -148,7 +148,7 @@ class ScitoFrame:
             res = ab_adata[ox, ab_adata.var_names.str.contains(r'(%s$)' % batch_name)]
             res.var_names = [x[0] for x in res.var_names.str.split(pat=batchid_string)]
             res.var.drop(res.var.columns, axis=1, inplace=True)
-            res.obs['batch'] = batch_name
+            res.obs['batch_name'] = batch_name
 
             # resolved adata
             result = result.concatenate(res, join='outer', index_unique=None)
