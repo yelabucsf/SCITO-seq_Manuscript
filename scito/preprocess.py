@@ -140,7 +140,7 @@ class ScitoFrame:
         for batch_name in av_batch_expr.index:
             values = batch_adata[:, batch_adata.var['batch'] == batch_name]
             values_use = values[values.obs['batch_cluster'] == np.argmin(av_batch_expr.loc[batch_name, :])]
-            fitty = norm.fit(values_use.X)
+            fitty = norm.fit(values_use.X.toarray())
             cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed),
                                  q=positiveQuantile)
 
