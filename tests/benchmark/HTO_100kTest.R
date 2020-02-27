@@ -31,7 +31,7 @@ result <- benchmark(
     ab_hashtag_obj <- NormalizeData(ab_hashtag_obj_in, assay = "HTO", normalization.method = "LogNormalize")
     rst <- HTODemux(ab_hashtag_obj, assay = "HTO", positive.quantile = 0.99,  kfunc = "kmeans")
   },
-  replications = 100
+  replications = 2
 )
 write.table(result, file="")
 
