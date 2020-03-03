@@ -130,7 +130,7 @@ class ScitoFrame:
                                    var=pd.DataFrame(batches, columns=['batch']))
 
         # blank adata for resolved drops
-        result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, 28))),
+        result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, list(num_ab)[0]))),
                                  var=pd.DataFrame(
                                      index=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)])),
                                  obs=None)
