@@ -2,7 +2,6 @@
 Data pre-processing for SCITO-seq
 '''
 
-
 import os
 import scanpy as sc
 import numpy as np
@@ -50,6 +49,7 @@ class ScitoFrame:
                   maxneighbor=100,
                   seed=33,
                   keep_input=False,
+                  collapse=True,
                   verbose=False):
         '''
         Function to assign droplets to sample id and detect singlets vs multiplets. Antibody counts are expected to be
@@ -64,33 +64,42 @@ class ScitoFrame:
         :param maxneighbor: Max number of neighbors per CLARANS cluster, for kfunc = "clarans" (irrelevant for now)
         :param seed: Sets the random seed.
         :param keep_input: keep input previous step of data analysis
+        :param collapse: sum all antibody counts per batch
         :param verbose: Chatty
         :return: anndata object split to sample id's and marked as singlets or multiplets
         '''
 
 
-        batches = self.adata.var_names.str.extract(r'(%s\d+)'%batchid_string).iloc[:,0].dropna().unique()
-        nClust = n_clust if n_clust != None else len(batches)+1
-
         # extract only antibody counts
         ab_adata = self.adata[:,self.adata.var_names.str.contains(r'(%s\d+)'%batchid_string)]
+
+        if collapse:
+            batches = self.adata.var_names.str.extract(r'(%s\d+)' % batchid_string).iloc[:, 0].dropna().unique()
+            num_ab = set([ab_adata[:, ab_adata.var_names.str.contains(r'(%s$)' % x)].n_vars for x in batches])
+            # collapse counts within batch
+            batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
+
+            # count number of clusters
+            nClust = n_clust if n_clust != None else len(batches) + 1
+            # create anndata object with collapsed counts per batch
+            batch_adata = anndata.AnnData(X=sparse.csr_matrix(batch_counts),
+                                          obs=self.adata.obs,
+                                          var=pd.DataFrame(batches, columns=['batch']))
+            batch_counts = None
+
+        else:
+            batchid_string = None
+            batches = ab_adata.var_names
+            num_ab = {1} # each ab is a batch
+            batch_adata = ab_adata.copy()
+            # count number of clusters
+            nClust = len(batch_adata.var_names)
+            batch_adata.var = pd.DataFrame(batches, columns=['batch'])
 
         # test that every batch has same number of anitbodies
 
         # TODO: try to catch this exception and look for other identifiers
-        num_ab = set([ab_adata[:, ab_adata.var_names.str.contains(r'(%s$)' % x)].n_vars for x in batches])
-        assert(len(num_ab) == 1), "ERROR: different number of antibodies per batch. Program exit"
-
-
-
-        # collapse counts within batch
-        batch_counts = np.transpose(np.array([count_collapser(ab_adata, bc) for bc in batches]))
-
-        # create anndata object with collapsed counts per batch
-        batch_adata = anndata.AnnData(X=sparse.csr_matrix(batch_counts),
-                                      obs=self.adata.obs,
-                                      var=pd.DataFrame(batches, columns=['batch']))
-        batch_counts = None
+        assert (len(num_ab) == 1), "ERROR: different number of antibodies per batch. Program exit"
 
         # Normalize and log scale data
         sc.pp.normalize_per_cell(batch_adata, counts_per_cell_after=1e4, min_counts=0)
@@ -130,10 +139,16 @@ class ScitoFrame:
                                    var=pd.DataFrame(batches, columns=['batch']))
 
         # blank adata for resolved drops
-        result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, list(num_ab)[0]))),
-                                 var=pd.DataFrame(
-                                     index=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)])),
-                                 obs=None)
+        if collapse:
+            result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, list(num_ab)[0]))),
+                                     var=pd.DataFrame(
+                                         index=set([x[0] for x in ab_adata.var_names.str.split(pat=batchid_string)])),
+                                     obs=None)
+        else:
+            result = anndata.AnnData(X=sparse.csr_matrix(np.zeros((1, len(batches)))),
+                                     var=pd.DataFrame(
+                                         index=batches),
+                                     obs=None)
         # for each batch barcode, we will use the minimum cluster for fitting
         # NOTE: fitting normal distribution to normalized and log-transformed data. Thresholds will be more conservative
         # TODO implement nbinom fit
