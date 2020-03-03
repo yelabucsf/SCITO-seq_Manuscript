@@ -203,6 +203,7 @@ class ScitoFrame:
         # some meta data
         self.meta = n_cells_atLevel_df
         self.n_positive = n_positive
+        self.discrete = discrete
 
 
 
