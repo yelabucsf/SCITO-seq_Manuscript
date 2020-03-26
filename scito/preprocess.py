@@ -105,6 +105,8 @@ class ScitoFrame:
         assert (len(num_ab) == 1), "ERROR: different number of antibodies per batch. Program exit"
 
         # Normalize and log scale data
+        if distr_fit == "nbinom":
+            batch_adataRAW = batch_adata.copy()
         sc.pp.normalize_per_cell(batch_adata, counts_per_cell_after=1e4, min_counts=0)
         if verbose:
             print("Keeping linear scale data for computing average")
@@ -135,7 +137,10 @@ class ScitoFrame:
             batch_adataNormLin = None
 
         elif distr_fit == "nbinom":
-            batch_adata = batch_adataNormLin.copy()
+            batch_adataRAW.obs['batch_cluster'] = clusters
+            batch_adata = batch_adataRAW.copy()
+            batch_adataNormLin = None
+            batch_adataRAW = None
         else:
             print("ERROR: unknown distribution to fit. Choose from 'norm', 'nbinom' ")
 
