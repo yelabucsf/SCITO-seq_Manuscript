@@ -71,7 +71,8 @@ class ScitoFrame:
         :param verbose: Chatty
         :return: anndata object split to sample id's and marked as singlets or multiplets
         '''
-
+        if distr_fit == "norm":
+            warn("WARNING data fit to normal distribution will be deprecated in the next versions")
 
         # extract only antibody counts
         ab_adata = self.adata[:,self.adata.var_names.str.contains(r'(%s\d+)'%batchid_string)]
