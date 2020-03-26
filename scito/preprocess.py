@@ -168,6 +168,9 @@ class ScitoFrame:
                 fitty = norm.fit(values_use.X.toarray())
                 cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed),
                                      q=positiveQuantile)
+                if verbose:
+                    print("Cutoff for {}: {} reads".format(batch_name,
+                                                           int(np.expm1(cutoff))))
 
             elif distr_fit == "nbinom":
                 endog = values_use.X.toarray()
@@ -178,6 +181,9 @@ class ScitoFrame:
                 p = n / (n + mu)
                 cutoff = np.quantile(nbinom.rvs(n=n, p=p, size=1000, random_state=seed),
                                      q=positiveQuantile)
+                if verbose:
+                    print("Cutoff for {}: {} reads".format(batch_name,
+                                                           int(cutoff)))
 
 
 
@@ -192,9 +198,7 @@ class ScitoFrame:
 
 
             discrete.X[ox, int(values.var.index[0])] = 1
-            if verbose:
-                print("Cutoff for {}: {} reads".format(batch_name,
-                                                       int(np.expm1(cutoff))))
+
 
         result = result[1:,:]
 
