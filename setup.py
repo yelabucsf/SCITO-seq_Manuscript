@@ -15,6 +15,7 @@ setup(name='scito',
             'pandas',
             'scikit-learn',
             'scipy',
+            'statsmodels',
       ],
       scripts=[],
       zip_safe=False)

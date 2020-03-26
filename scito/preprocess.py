@@ -12,7 +12,8 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from warnings import warn
 from scipy import sparse
-from scipy.stats import norm
+from scipy.stats import norm, nbinom
+import statsmodels.api as sm
 from scito.utils import count_collapser, av_gene_expression, drop_assigner, drop_identifier
 
 class ScitoFrame:
@@ -47,6 +48,7 @@ class ScitoFrame:
                   n_init=100,
                   kfunc="kmeans",
                   maxneighbor=100,
+                  distr_fit="nbinom",
                   seed=33,
                   keep_input=False,
                   collapse=True,
@@ -54,17 +56,18 @@ class ScitoFrame:
         '''
         Function to assign droplets to sample id and detect singlets vs multiplets. Antibody counts are expected to be
         normalized and log scaled (e.g. using sc.pp.normalize_per_cell(), sc.pp.log1p())
-        :param batchid_string: string identifying batch barcode. Default: "barcode"
-        :param positiveQuantile: The quantile of inferred 'negative' distribution for each batch -
+        :param batchid_string: string. Identifies batch barcode. Default: "barcode"
+        :param positiveQuantile: float. The quantile of inferred 'negative' distribution for each batch -
                 over which the cell is considered 'positive'. Default is 0.99
-        :param n_clust: Initial number of clusters for batches.
+        :param n_clust: int. Initial number of clusters for batches.
                 Default is the # of batch oligo names + 1 (to account for negatives)
-        :param n_init: value for k-means clustering (for kfunc = "kmeans"). 100 by default
-        :param kfunc: Clustering function for initial batch grouping. Default and only available now is "kmeans"
-        :param maxneighbor: Max number of neighbors per CLARANS cluster, for kfunc = "clarans" (irrelevant for now)
-        :param seed: Sets the random seed.
-        :param keep_input: keep input previous step of data analysis
-        :param collapse: sum all antibody counts per batch
+        :param n_init: int. value for k-means clustering (for kfunc = "kmeans"). 100 by default
+        :param kfunc: string. Clustering function for initial batch grouping. Default and only available now is "kmeans"
+        :param maxneighbor: int. Max number of neighbors per CLARANS cluster, for kfunc = "clarans" (irrelevant for now)
+        :param distr_fit: str. Which distribution to fit. Accepts ("nbinom", "norm"). Default: "nbinom"
+        :param seed: int. Sets the random seed.
+        :param keep_input: bool. keep input previous step of data analysis
+        :param collapse: bool. Sum all antibody counts per batch
         :param verbose: Chatty
         :return: anndata object split to sample id's and marked as singlets or multiplets
         '''
@@ -122,13 +125,20 @@ class ScitoFrame:
 
 
         batch_adataNormLin.obs['batch_cluster'] = clusters
-        batch_adata.obs['batch_cluster'] = clusters
         marker_dict = {batch_adataNormLin.var.keys()[0]: batch_adataNormLin.var['batch']} # for average expression of batch oligo
 
         av_batch_expr = av_gene_expression(batch_adataNormLin, marker_dict, gene_symbol_key='batch', partition_key='batch_cluster').iloc[:,:-1]
 
+        if distr_fit == "norm":
         # free up memory
-        batch_adataNormLin = None
+            batch_adata.obs['batch_cluster'] = clusters
+            batch_adataNormLin = None
+
+        elif distr_fit == "nbinom":
+            batch_adata = batch_adataNormLin.copy()
+            batch_adata = None
+        else:
+            print("ERROR: unknown distribution to fit. Choose from 'norm', 'nbinom' ")
 
         if any(av_batch_expr.iloc[:,:-1]) == 0:
             warn("WARNING Cells with 0 counts exist as a cluster")
@@ -151,13 +161,26 @@ class ScitoFrame:
                                      obs=None)
         # for each batch barcode, we will use the minimum cluster for fitting
         # NOTE: fitting normal distribution to normalized and log-transformed data. Thresholds will be more conservative
-        # TODO implement nbinom fit
         for batch_name in av_batch_expr.index:
             values = batch_adata[:, batch_adata.var['batch'] == batch_name]
             values_use = values[values.obs['batch_cluster'] == np.argmin(av_batch_expr.loc[batch_name, :])]
-            fitty = norm.fit(values_use.X.toarray())
-            cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed),
-                                 q=positiveQuantile)
+
+            if distr_fit == "norm":
+                fitty = norm.fit(values_use.X.toarray())
+                cutoff = np.quantile(norm.rvs(loc=fitty[0], scale=fitty[1], size=1000, random_state=seed),
+                                     q=positiveQuantile)
+
+            elif distr_fit == "nbinom":
+                endog = values_use.X.toarray()
+                exog = [1] * len(values_use.X.toarray())
+                fitty = sm.NegativeBinomial(endog, exog).fit(disp=False)
+                mu = np.e ** fitty._results.params[0]
+                n = 1 / fitty._results.params[1]
+                p = n / (n + mu)
+                cutoff = np.quantile(nbinom.rvs(n=n, p=p, size=1000, random_state=seed),
+                                     q=positiveQuantile)
+
+
 
             ox = [x[0] for x in np.argwhere(values.X > cutoff)]
             res = ab_adata[ox, ab_adata.var_names.str.contains(r'(%s$)' % batch_name)]
