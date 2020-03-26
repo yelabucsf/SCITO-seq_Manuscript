@@ -136,7 +136,6 @@ class ScitoFrame:
 
         elif distr_fit == "nbinom":
             batch_adata = batch_adataNormLin.copy()
-            batch_adata = None
         else:
             print("ERROR: unknown distribution to fit. Choose from 'norm', 'nbinom' ")
 
