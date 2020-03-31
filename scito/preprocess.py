@@ -48,7 +48,6 @@ class ScitoFrame:
                   n_init=100,
                   kfunc="kmeans",
                   maxneighbor=100,
-                  distr_fit="nbinom",
                   seed=33,
                   keep_input=False,
                   collapse=True,
@@ -64,13 +63,13 @@ class ScitoFrame:
         :param n_init: int. value for k-means clustering (for kfunc = "kmeans"). 100 by default
         :param kfunc: string. Clustering function for initial batch grouping. Default and only available now is "kmeans"
         :param maxneighbor: int. Max number of neighbors per CLARANS cluster, for kfunc = "clarans" (irrelevant for now)
-        :param distr_fit: str. Which distribution to fit. Accepts ("nbinom", "norm"). Default: "nbinom"
         :param seed: int. Sets the random seed.
         :param keep_input: bool. keep input previous step of data analysis
         :param collapse: bool. Sum all antibody counts per batch
         :param verbose: Chatty
         :return: anndata object split to sample id's and marked as singlets or multiplets
         '''
+        distr_fit = "nbinom"
         if distr_fit == "norm":
             warn("WARNING data fit to normal distribution will be deprecated in the next versions")
 

@@ -1,4 +1,6 @@
 from setuptools import setup
+from distutils.core import setup, Extension
+
 
 setup(name='scito',
       version='0.2.0',
@@ -17,5 +19,6 @@ setup(name='scito',
             'scipy',
             'statsmodels',
       ],
+      ext_modules=[Extension('helloworld', ['src/test.c'])],
       scripts=[],
       zip_safe=False)
