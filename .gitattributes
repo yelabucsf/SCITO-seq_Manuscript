@@ -1,0 +1,6 @@
+*.tgz filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.txt filter=lfs diff=lfs merge=lfs -text
+*.fsc filter=lfs diff=lfs merge=lfs -text
+*.fcsc filter=lfs diff=lfs merge=lfs -text
+*.fcs filter=lfs diff=lfs merge=lfs -text
