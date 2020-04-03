@@ -3,6 +3,9 @@
 This repository contains SCITO-seq package for demultiplexing and resolving single cell data from SCITO-seq experiments.
 It also contains manuscript-related CyTOF data, SCITO-seq data and code and notebooks used for analysis. 
 
+# News
+We are currently working on integrating python SCITO-seq package into the unified workflow.
+
 ## Important branches  
 `master` - package (stable, alpha) + manuscript data  
 `solid` - only package (stable, alpha)  
