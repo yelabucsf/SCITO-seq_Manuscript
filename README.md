@@ -9,4 +9,5 @@ We are currently working on integrating python SCITO-seq package into the unifie
 ### Repository structure:
 `paper/code` - R code and jupyter notebooks demonstrating SCITO-seq data analysis  
 `paper/CyTOF` - CyTOF data  
-`paper/SCITOseq_counts` - count matrices (outputs of `cellranger count`)
+`paper/SCITOseq_counts` - count matrices (outputs of `cellranger count`)  
+`Tutorial.md` - detailed SCITO-seq data analysis workflow as presented in the manuscript

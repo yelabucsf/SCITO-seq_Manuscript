@@ -4,7 +4,7 @@ For alignment, we currently used the Feature barcoding analysis pipeline from 10
 you will need two specific files called library.csv and features.csv. You can analyze multi-modal
 data easily by specifying your library types in the library.csv file. Detailed information on how to specify 
 these files can be found [HERE](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/feature-bc-analysis).
-Alternatively, you can align separately (Gene expression, Antibody expression.. etc) and combine the aligned matrix 
+Alternatively, you can align **separately (Gene expression, Antibody expression.. etc) and combine the aligned matrix 
 in the later step.
 
 ### Creating count matrix  
