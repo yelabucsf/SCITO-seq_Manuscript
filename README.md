@@ -6,21 +6,7 @@ It also contains manuscript-related CyTOF data, SCITO-seq data and code and note
 # News
 We are currently working on integrating python SCITO-seq package into the unified workflow.
 
-## Important branches  
-`master` - package (stable, alpha) + manuscript data  
-`solid` - only package (stable, alpha)  
-`develop` - developer version of package only   
-
-## Paper-related data/code  
-We share the code (R and Jupyter notebooks), CyTOF and SCITO-seq data present in the original manuscript in the `master` 
-branch.
-
-## Package installation  
-We recommend to create a conda environment or virtualenv with pre-installed scanpy
-```bash
-git clone https://github.com/yelabucsf/SCITO-seq
-cd SCITO-seq
-pip install .
-```
-
-after that follow specific tutorials in the `SCITO-seq/examples`
+### Repository structure:
+`paper/code` - R code and jupyter notebooks demonstrating SCITO-seq data analysis  
+`paper/CyTOF` - CyTOF data  
+`paper/SCITOseq_counts` - count matrices (outputs of `cellranger count`)
