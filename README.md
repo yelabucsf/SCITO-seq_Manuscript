@@ -3,7 +3,7 @@
 This repository contains SCITO-seq package for demultiplexing and resolving single cell data from SCITO-seq experiments.
 It also contains manuscript-related CyTOF data, SCITO-seq data and code and notebooks used for analysis. 
 
-To get the data you need to `git clone` this repository. Downloading ZIP will only download pointers to the data.
+To get the data you need to install [Git LFS](https://git-lfs.github.com) and `git clone` this repository. Downloading ZIP will only download pointers to the data.
 
 # News
 We are currently working on integrating python SCITO-seq package into the unified workflow.
