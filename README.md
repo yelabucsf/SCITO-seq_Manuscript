@@ -13,3 +13,6 @@ We are currently working on integrating python SCITO-seq package into the unifie
 `paper/CyTOF` - CyTOF data  
 `paper/SCITOseq_counts` - count matrices (outputs of `cellranger count`)  
 `Tutorial.md` - detailed SCITO-seq data analysis workflow as presented in the manuscript
+
+### Addendum  
+Package `nero` featured in some Jupyter notebooks is an unreleased package for handling single cell data. For your analysis you can exclude it and filter demuxlet outputs with `panda.DataFrame` methods. 
