@@ -2,13 +2,13 @@ library(ggplot2);
 library(plyr)
 setwd("~/Box/Papers/In Preparation/2019.Hwang.scitoseq/Code")
 
-## cost per read assuming $5621 per 3 billion reads
-## cost.seq.base <- 5621/3e9
+## cost per read assuming $7083 per 3 billion reads
+## cost.seq.base <- 7083/3e9
 ## assuming $7/gigabase and we read 100 bases
 ##cost.seq.per.read <- 5/1e9*100
-cost.seq.per.read <- 26700/12e9;
+cost.seq.per.read <- 28332/12e9;
 ## ucsf discount
-cost.seq.per.read <- 1.7/1e6
+cost.seq.per.read <- 2.4/1e6
 
 ## cost per well
 cost.prep.per.well <- 1482;
