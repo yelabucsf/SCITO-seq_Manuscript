@@ -73,7 +73,7 @@ ab_hashtag <- rbind(Matrix::colSums(ab[1:28,]),
 rownames(ab_hashtag) = paste("Batch", seq(1:10), sep="")
 ```
 
-Let’s setup a Seurat object and store classification result
+Let’s setup a Seurat object and store classification result (*Note, make sure to define the HTODemux function before running HTODemiux since it's been modified from the original version)
 
 ```R
 ab_hashtag_obj <- CreateSeuratObject(counts=ab, meta.data=aux)
